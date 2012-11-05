@@ -1217,7 +1217,14 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 		}
 		chooser.setDialogTitle(text);
 		if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-			return chooser.getSelectedFile();
+			File file = chooser.getSelectedFile();
+			if (extension != null) {
+				String extfile =  FileExtensionFilter.getExtension(file);
+				if (extfile == null || extfile.equalsIgnoreCase(extension)) {
+					file = new File(file.getAbsolutePath()+"."+extension);
+				}
+			}
+			return file;
 		}
 		return null;
 	}
