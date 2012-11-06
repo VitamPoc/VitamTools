@@ -69,6 +69,7 @@ public class PdfaConverter {
 			System.err.println(StaticValues.LBL.error_warning.get() + " temp destination exist: " +
 					targetTempFile.getAbsolutePath());
 		}
+
 		Element root = XmlDom.factory.createElement("convert");
 		Element newElt = XmlDom.factory.createElement("file");
 		newElt.addAttribute("filename", basepath + basename);

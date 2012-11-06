@@ -870,7 +870,11 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 									int nb = initDirectoryListing(directory);
 									if (nb > 0) {
 										config.nbDocument = nb;
-										config.lastScannedDirectory = directory;
+										if (directory.isFile()) {
+											config.lastScannedDirectory = directory.getParentFile();
+										} else {
+											config.lastScannedDirectory = directory;
+										}
 										initProgressBar();
 										runCommand(label);
 									} else {
@@ -902,7 +906,11 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 									int nb = initDirectoryListing(directory);
 									if (nb > 0) {
 										config.nbDocument = nb;
-										config.lastScannedDirectory = directory;
+										if (directory.isFile()) {
+											config.lastScannedDirectory = directory.getParentFile();
+										} else {
+											config.lastScannedDirectory = directory;
+										}
 										initProgressBar();
 										runCommand(label);
 									} else {
@@ -933,7 +941,11 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 									int nb = initDirectoryListing(directory);
 									if (nb > 0) {
 										config.nbDocument = nb;
-										config.lastScannedDirectory = directory;
+										if (directory.isFile()) {
+											config.lastScannedDirectory = directory.getParentFile();
+										} else {
+											config.lastScannedDirectory = directory;
+										}
 										initProgressBar();
 										runCommand(label);
 									} else {
@@ -963,7 +975,11 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 								if (directory != null) {
 									int nb = initDirectoryListing(directory);
 									if (nb > 0) {
-										config.lastScannedDirectory = directory;
+										if (directory.isFile()) {
+											config.lastScannedDirectory = directory.getParentFile();
+										} else {
+											config.lastScannedDirectory = directory;
+										}
 										File directoryOut = choixDirectory("(target)");
 										if (directoryOut != null) {
 											if (directoryOut.isFile()) {
@@ -1220,7 +1236,7 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 			File file = chooser.getSelectedFile();
 			if (extension != null) {
 				String extfile =  FileExtensionFilter.getExtension(file);
-				if (extfile == null || extfile.equalsIgnoreCase(extension)) {
+				if (extfile == null || ! extfile.equalsIgnoreCase(extension)) {
 					file = new File(file.getAbsolutePath()+"."+extension);
 				}
 			}

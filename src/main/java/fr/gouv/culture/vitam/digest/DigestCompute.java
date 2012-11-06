@@ -27,8 +27,14 @@ import java.io.UnsupportedEncodingException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.io.OutputFormat;
@@ -256,12 +262,111 @@ public class DigestCompute {
 	}
 
 	public static int createDigest(File src, File dst, File ftar, File fglobal, 
-			boolean oneDigestPerFile, String []extensions) {
+			boolean oneDigestPerFile, String []extensions, String mask, boolean prefix) {
+		if (mask == null) {
+			return createDigest(src, dst, ftar, fglobal, oneDigestPerFile, extensions);
+		}
+		try {
+			if (prefix) {
+				// fix mask
+				List<File> filesToScan = new ArrayList<File>();
+				File dirToSearch = src;
+				if (!dirToSearch.isDirectory()) {
+					if (dirToSearch.canRead() && dirToSearch.getName().startsWith(mask)) {
+						filesToScan.add(dirToSearch);
+					} else {
+						throw new CommandExecutionException("Resources not found");
+					}
+				} else {
+					Collection<File> temp = FileUtils.listFiles(dirToSearch, extensions, 
+							StaticValues.config.argument.recursive);
+					for (File file : temp) {
+						if (file.getName().startsWith(mask)) {
+							filesToScan.add(file);
+						}
+					}
+					temp.clear();
+				}
+				return createDigest(src, dst, ftar, fglobal, oneDigestPerFile, filesToScan);
+			} else {
+				// RegEx mask
+				File dirToSearch = src;
+				if (!dirToSearch.isDirectory()) {
+					List<File> filesToScan = new ArrayList<File>();
+					if (dirToSearch.canRead() && dirToSearch.getName().matches(mask+".*")) {
+						filesToScan.add(dirToSearch);
+						String global = dirToSearch.getName().replaceAll("[^"+mask+"].*", "") 
+								+ "_all_digests.xml";
+						fglobal = new File(fglobal, global);
+					} else {
+						throw new CommandExecutionException("Resources not found");
+					}
+					return createDigest(src, dst, ftar, fglobal, oneDigestPerFile, filesToScan);
+				} else {
+					HashMap<String, List<File>> hashmap = new HashMap<String, List<File>>();
+					Collection<File> temp = FileUtils.listFiles(dirToSearch, extensions, 
+							StaticValues.config.argument.recursive);
+					List<File> filesToScan = null;
+					Pattern pattern = Pattern.compile(mask+".*");
+					Pattern pattern2 = Pattern.compile(mask);
+					for (File file : temp) {
+						String filename = file.getName();
+						Matcher matcher = pattern.matcher(filename);
+						if (matcher.matches()) {
+							String end = pattern2.matcher(filename).replaceFirst("");
+							int pos = filename.indexOf(end);
+							if (pos <= 0) {
+								System.err.println("Cannot find : "+end + " in " + filename);
+								continue;
+							}
+							String global = filename.substring(0, pos);
+							if (global.charAt(global.length()-1) != '_') {
+								global += "_";
+							}
+							global += "all_digests.xml";
+							filesToScan = hashmap.get(global);
+							if (filesToScan == null) {
+								filesToScan = new ArrayList<File>();
+								hashmap.put(global, filesToScan);
+							}
+							filesToScan.add(file);
+						}
+					}
+					temp.clear();
+					int res = 0;
+					for (String global : hashmap.keySet()) {
+						File fglobalnew = new File(fglobal, global);
+						res += createDigest(src, dst, ftar, fglobalnew, oneDigestPerFile, hashmap.get(global));
+					}
+					hashmap.clear();
+					return res;
+				}
+			}
+		} catch (CommandExecutionException e1) {
+			System.err.println(StaticValues.LBL.error_error.get() + " " + e1.toString());
+			return -1;
+		}
+	}
+	
+	public static int createDigest(File src, File dst, File ftar, File fglobal, 
+				boolean oneDigestPerFile, String []extensions) {
 		try {
 			List<File> filesToScan = DroidHandler.matchedFiled(
 					new File[] { src },
 					extensions,
 					StaticValues.config.argument.recursive);
+			if (src.isFile()) {
+				src = src.getParentFile();
+			}
+			return createDigest(src, dst, ftar, fglobal, oneDigestPerFile, filesToScan);
+		} catch (CommandExecutionException e1) {
+			System.err.println(StaticValues.LBL.error_error.get() + " " + e1.toString());
+			return -1;
+		}
+	}
+	public static int createDigest(File src, File dst, File ftar, File fglobal, 
+		boolean oneDigestPerFile, List<File> filesToScan) {
+		try {
 			Element global = null;
 			Document globalDoc = null;
 			if (fglobal != null) {
@@ -390,9 +495,6 @@ public class DigestCompute {
 				return -error;
 			}
 			return currank;
-		} catch (CommandExecutionException e1) {
-			System.err.println(StaticValues.LBL.error_error.get() + " " + e1.toString());
-			return -1;
 		} catch (UnsupportedEncodingException e) {
 			System.err.println(StaticValues.LBL.error_error.get() + " " + e.toString());
 			return -1;

@@ -19,6 +19,7 @@ package fr.gouv.culture.vitam.gui;
 
 import java.awt.BorderLayout;
 
+import javax.swing.ButtonGroup;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -44,6 +45,9 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 
 import javax.swing.border.CompoundBorder;
+import javax.swing.JRadioButton;
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
 
 /**
  * Dialog to handle configuration change in the GUI
@@ -66,6 +70,12 @@ public class VitamDigestDialog extends JPanel {
 	private JButton btnTar;
 	private JButton btnGlobal;
 	private JTextField prefix;
+	private JTextField textMasque;
+	private JButton btnMasque;
+	private JRadioButton rdbtnTousLesFichiers;
+	private JRadioButton rdbtnMasqueAmont;
+	private JRadioButton rdbtnRegex;
+	private JComboBox comboRegEx;
 
 	/**
 	 * @param frame
@@ -122,9 +132,10 @@ public class VitamDigestDialog extends JPanel {
 		JPanel xmlFilePanel = new JPanel();
 		tabbedPane.addTab("Digest Context", null, xmlFilePanel, null);
 		GridBagLayout gbl_xmlFilePanel = new GridBagLayout();
-		gbl_xmlFilePanel.columnWidths = new int[] { 21, 38, 86, 0, 45, 86, 72, 34, 0 };
+		gbl_xmlFilePanel.columnWidths = new int[] { 21, 38, 86, 0, 45, 86, 72, 0, 34, 0 };
 		gbl_xmlFilePanel.rowHeights = new int[] { 0, 20, 0, 0, 0, 0, 0, 0, 0 };
-		gbl_xmlFilePanel.columnWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+		gbl_xmlFilePanel.columnWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0,
+				1.0,
 				Double.MIN_VALUE };
 		gbl_xmlFilePanel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 		xmlFilePanel.setLayout(gbl_xmlFilePanel);
@@ -208,6 +219,14 @@ public class VitamDigestDialog extends JPanel {
 				btnTar.setEnabled(chckbxTarzipAssoci.isSelected());
 			}
 		});
+
+		chckbxUnFichierPar = new JCheckBox("Un fichier par source");
+		GridBagConstraints gbc_chckbxUnFichierPar = new GridBagConstraints();
+		gbc_chckbxUnFichierPar.gridwidth = 2;
+		gbc_chckbxUnFichierPar.insets = new Insets(0, 0, 5, 5);
+		gbc_chckbxUnFichierPar.gridx = 6;
+		gbc_chckbxUnFichierPar.gridy = 1;
+		xmlFilePanel.add(chckbxUnFichierPar, gbc_chckbxUnFichierPar);
 		GridBagConstraints gbc_chckbxTarzipAssoci = new GridBagConstraints();
 		gbc_chckbxTarzipAssoci.anchor = GridBagConstraints.WEST;
 		gbc_chckbxTarzipAssoci.insets = new Insets(0, 0, 5, 5);
@@ -256,7 +275,17 @@ public class VitamDigestDialog extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				globaldir.setEnabled(chckbxFichierGlobal.isSelected());
 				btnGlobal.setEnabled(chckbxFichierGlobal.isSelected());
-				prefix.setEnabled(chckbxFichierGlobal.isSelected());
+				rdbtnTousLesFichiers.setEnabled(chckbxFichierGlobal.isSelected());
+				rdbtnMasqueAmont.setEnabled(chckbxFichierGlobal.isSelected());
+				rdbtnRegex.setEnabled(chckbxFichierGlobal.isSelected());
+				if (!chckbxFichierGlobal.isSelected()) {
+					prefix.setEnabled(true);
+					textMasque.setEnabled(false);
+					comboRegEx.setEnabled(false);
+					btnMasque.setEnabled(false);
+				} else {
+					changeRadio();
+				}
 			}
 		});
 		GridBagConstraints gbc_chckbxFichierGlobal = new GridBagConstraints();
@@ -302,7 +331,7 @@ public class VitamDigestDialog extends JPanel {
 		gbc_btnGlobal.gridy = 3;
 		xmlFilePanel.add(btnGlobal, gbc_btnGlobal);
 
-		JLabel lblPrefixe = new JLabel("Prefixe");
+		JLabel lblPrefixe = new JLabel("Préfixe");
 		GridBagConstraints gbc_lblPrefixe = new GridBagConstraints();
 		gbc_lblPrefixe.insets = new Insets(0, 0, 5, 5);
 		gbc_lblPrefixe.anchor = GridBagConstraints.EAST;
@@ -320,24 +349,144 @@ public class VitamDigestDialog extends JPanel {
 		xmlFilePanel.add(prefix, gbc_prefix);
 		prefix.setColumns(10);
 
-		chckbxUnFichierPar = new JCheckBox("Un fichier par source");
-		GridBagConstraints gbc_chckbxUnFichierPar = new GridBagConstraints();
-		gbc_chckbxUnFichierPar.anchor = GridBagConstraints.WEST;
-		gbc_chckbxUnFichierPar.insets = new Insets(0, 0, 5, 5);
-		gbc_chckbxUnFichierPar.gridx = 1;
-		gbc_chckbxUnFichierPar.gridy = 5;
-		xmlFilePanel.add(chckbxUnFichierPar, gbc_chckbxUnFichierPar);
+		rdbtnTousLesFichiers = new JRadioButton("Tous les fichiers");
+		rdbtnTousLesFichiers.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				changeRadio();
+			}
+		});
+		GridBagConstraints gbc_rdbtnTousLesFichiers = new GridBagConstraints();
+		gbc_rdbtnTousLesFichiers.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnTousLesFichiers.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnTousLesFichiers.gridx = 7;
+		gbc_rdbtnTousLesFichiers.gridy = 4;
+		xmlFilePanel.add(rdbtnTousLesFichiers, gbc_rdbtnTousLesFichiers);
 
 		JLabel lblTitle = new JLabel("Vitam Configuration");
 		lblTitle.setHorizontalAlignment(SwingConstants.CENTER);
 		add(lblTitle, BorderLayout.NORTH);
 		prefix.setText("allinone");
+
+		JLabel lblMasque = new JLabel("Préfixe filtrant");
+		GridBagConstraints gbc_lblMasque = new GridBagConstraints();
+		gbc_lblMasque.gridwidth = 2;
+		gbc_lblMasque.anchor = GridBagConstraints.EAST;
+		gbc_lblMasque.insets = new Insets(0, 0, 5, 5);
+		gbc_lblMasque.gridx = 1;
+		gbc_lblMasque.gridy = 5;
+		xmlFilePanel.add(lblMasque, gbc_lblMasque);
+
+		textMasque = new JTextField();
+		GridBagConstraints gbc_textMasque = new GridBagConstraints();
+		gbc_textMasque.gridwidth = 3;
+		gbc_textMasque.insets = new Insets(0, 0, 5, 5);
+		gbc_textMasque.fill = GridBagConstraints.HORIZONTAL;
+		gbc_textMasque.gridx = 3;
+		gbc_textMasque.gridy = 5;
+		xmlFilePanel.add(textMasque, gbc_textMasque);
+		textMasque.setColumns(10);
+
+		btnMasque = new JButton();
+		btnMasque.setMargin(new Insets(2, 2, 2, 2));
+		btnMasque.setIcon(new ImageIcon(VitamDigestDialog.class
+				.getResource(VitamGui.RESOURCES_IMG_CHECKFILES_PNG)));
+		btnMasque.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				File file = openFile(source.getText(), StaticValues.LBL.tools_dir.get(), null);
+				if (file != null) {
+					textMasque.setText(file.getName());
+				}
+			}
+		});
+		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
+		gbc_btnNewButton.insets = new Insets(0, 0, 5, 5);
+		gbc_btnNewButton.gridx = 6;
+		gbc_btnNewButton.gridy = 5;
+		xmlFilePanel.add(btnMasque, gbc_btnNewButton);
+
+		rdbtnMasqueAmont = new JRadioButton("Masque amont");
+		rdbtnMasqueAmont.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				changeRadio();
+			}
+		});
+		GridBagConstraints gbc_rdbtnMasqueAmont = new GridBagConstraints();
+		gbc_rdbtnMasqueAmont.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnMasqueAmont.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnMasqueAmont.gridx = 7;
+		gbc_rdbtnMasqueAmont.gridy = 5;
+		xmlFilePanel.add(rdbtnMasqueAmont, gbc_rdbtnMasqueAmont);
+
+		JLabel lblNomComplet = new JLabel("Préfixe calculé");
+		GridBagConstraints gbc_lblNomComplet = new GridBagConstraints();
+		gbc_lblNomComplet.gridwidth = 2;
+		gbc_lblNomComplet.anchor = GridBagConstraints.EAST;
+		gbc_lblNomComplet.insets = new Insets(0, 0, 5, 5);
+		gbc_lblNomComplet.gridx = 1;
+		gbc_lblNomComplet.gridy = 6;
+		xmlFilePanel.add(lblNomComplet, gbc_lblNomComplet);
+		
+		comboRegEx = new JComboBox();
+		comboRegEx.setModel(new DefaultComboBoxModel(new String[] {"[0-9]{4,6}_[0-9]{8}_", "[0-9]{4}_[0-9]{8}_", "[0-9]{6}_[0-9]{8}_"}));
+		comboRegEx.setEditable(true);
+		GridBagConstraints gbc_comboRegEx = new GridBagConstraints();
+		gbc_comboRegEx.gridwidth = 3;
+		gbc_comboRegEx.insets = new Insets(0, 0, 5, 5);
+		gbc_comboRegEx.fill = GridBagConstraints.HORIZONTAL;
+		gbc_comboRegEx.gridx = 3;
+		gbc_comboRegEx.gridy = 6;
+		xmlFilePanel.add(comboRegEx, gbc_comboRegEx);
+
+		rdbtnRegex = new JRadioButton("RegEx");
+		rdbtnRegex.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				changeRadio();
+			}
+		});
+		GridBagConstraints gbc_rdbtnRegex = new GridBagConstraints();
+		gbc_rdbtnRegex.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnRegex.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnRegex.gridx = 7;
+		gbc_rdbtnRegex.gridy = 6;
+		xmlFilePanel.add(rdbtnRegex, gbc_rdbtnRegex);
+
+		ButtonGroup group = new ButtonGroup();
+		group.add(rdbtnTousLesFichiers);
+		group.add(rdbtnMasqueAmont);
+		group.add(rdbtnRegex);
+		rdbtnTousLesFichiers.setSelected(true);
+
 		tarzip.setEnabled(false);
 		btnTar.setEnabled(false);
 		globaldir.setEnabled(false);
 		btnGlobal.setEnabled(false);
 		prefix.setEnabled(false);
+		rdbtnTousLesFichiers.setEnabled(false);
+		rdbtnMasqueAmont.setEnabled(false);
+		rdbtnRegex.setEnabled(false);
+		textMasque.setEnabled(false);
+		btnMasque.setEnabled(false);
 		initValue();
+	}
+
+	public void changeRadio() {
+		if (rdbtnRegex.isSelected()) {
+			textMasque.setEnabled(false);
+			comboRegEx.setEnabled(true);
+			prefix.setEnabled(false);
+			btnMasque.setEnabled(false);
+		} else if (rdbtnMasqueAmont.isSelected()) {
+			textMasque.setEnabled(true);
+			comboRegEx.setEnabled(false);
+			prefix.setEnabled(false);
+			btnMasque.setEnabled(true);
+		} else {
+			rdbtnTousLesFichiers.setSelected(true);
+			textMasque.setEnabled(false);
+			comboRegEx.setEnabled(false);
+			prefix.setEnabled(true);
+			btnMasque.setEnabled(false);
+		}
 	}
 
 	public void initValue() {
@@ -366,6 +515,7 @@ public class VitamDigestDialog extends JPanel {
 			boolean oneDigestPerFile = chckbxUnFichierPar.isSelected();
 			boolean globalFile = chckbxFichierGlobal.isSelected();
 			File fglobal = null;
+			String mask = null;
 			if (globalFile && globaldir.getText() == null) {
 				JOptionPane.showMessageDialog(frame,
 						"Global invalide",
@@ -382,8 +532,17 @@ public class VitamDigestDialog extends JPanel {
 					fglobal = null;
 					globalFile = false;
 				} else {
-					File fout = new File(fglobal, prefix.getText() + "_all_digests.xml");
-					fglobal = fout;
+					if (rdbtnTousLesFichiers.isSelected()) {
+						File fout = new File(fglobal, prefix.getText() + "_all_digests.xml");
+						fglobal = fout;
+					} else if (rdbtnMasqueAmont.isSelected()) {
+						File fout = new File(fglobal, textMasque.getText() + "_all_digests.xml");
+						fglobal = fout;
+						mask = textMasque.getText();
+					} else {
+						// regex
+						mask = (String) comboRegEx.getSelectedItem();
+					}
 				}
 			}
 			boolean tarFile = chckbxTarzipAssoci.isSelected();
@@ -405,13 +564,14 @@ public class VitamDigestDialog extends JPanel {
 					tarFile = false;
 				}
 			}
-			int currank = DigestCompute.createDigest(src, dst, ftar, fglobal, oneDigestPerFile, null);
+			int currank = DigestCompute.createDigest(src, dst, ftar, fglobal, oneDigestPerFile,
+					null, mask, rdbtnMasqueAmont.isSelected());
 			if (currank > 0) {
 				vitamGui.texteOut.insertIcon(new ImageIcon(getClass().getResource(
 						VitamGui.RESOURCES_IMG_VALID_PNG)));
 				System.out
 						.println(StaticValues.LBL.action_digest.get() +
-								" [ " + currank  + " ]");
+								" [ " + currank + " ]");
 			}
 		} finally {
 			if (fromMain) {
@@ -445,7 +605,12 @@ public class VitamDigestDialog extends JPanel {
 			}
 		}
 		if (chooser == null) {
-			chooser = new JFileChooser(System.getProperty("user.dir"));
+			String file = source.getText();
+			if (file != null && file.length() > 0) {
+				chooser = new JFileChooser(file);
+			} else {
+				chooser = new JFileChooser(System.getProperty("user.dir"));
+			}
 		}
 		if (extension == null) {
 			chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
@@ -472,7 +637,12 @@ public class VitamDigestDialog extends JPanel {
 			}
 		}
 		if (chooser == null) {
-			chooser = new JFileChooser(System.getProperty("user.dir"));
+			String file = source.getText();
+			if (file != null && file.length() > 0) {
+				chooser = new JFileChooser(file);
+			} else {
+				chooser = new JFileChooser(System.getProperty("user.dir"));
+			}
 		}
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		chooser.setDialogTitle(text);

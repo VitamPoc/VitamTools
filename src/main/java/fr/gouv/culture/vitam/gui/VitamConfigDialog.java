@@ -695,7 +695,7 @@ public class VitamConfigDialog extends JPanel {
 		gbc_btnUnoconv.gridy = 7;
 		toolsPanel.add(btnUnoconv, gbc_btnUnoconv);
 		
-		chckbxExtractKeywords = new JCheckBox("Extract Keywords");
+		chckbxExtractKeywords = new JCheckBox(StaticValues.LBL.config_keywords.get());
 		GridBagConstraints gbc_chckbxExtractKeywords = new GridBagConstraints();
 		gbc_chckbxExtractKeywords.anchor = GridBagConstraints.EAST;
 		gbc_chckbxExtractKeywords.insets = new Insets(0, 0, 5, 5);
@@ -703,7 +703,7 @@ public class VitamConfigDialog extends JPanel {
 		gbc_chckbxExtractKeywords.gridy = 8;
 		toolsPanel.add(chckbxExtractKeywords, gbc_chckbxExtractKeywords);
 		
-		JLabel lblMillisecondsPerKb = new JLabel("to PDF/A Milliseconds per KB");
+		JLabel lblMillisecondsPerKb = new JLabel(StaticValues.LBL.config_limitkb.get());
 		GridBagConstraints gbc_lblMillisecondsPerKb = new GridBagConstraints();
 		gbc_lblMillisecondsPerKb.anchor = GridBagConstraints.EAST;
 		gbc_lblMillisecondsPerKb.insets = new Insets(0, 0, 5, 5);
@@ -720,7 +720,7 @@ public class VitamConfigDialog extends JPanel {
 		toolsPanel.add(msperkb, gbc_msperkb);
 		msperkb.setColumns(10);
 
-		JLabel lblLowLimit = new JLabel("to PDF/A Low Limit in ms");
+		JLabel lblLowLimit = new JLabel(StaticValues.LBL.config_limitlow.get());
 		GridBagConstraints gbc_lblLowLimit = new GridBagConstraints();
 		gbc_lblLowLimit.anchor = GridBagConstraints.EAST;
 		gbc_lblLowLimit.insets = new Insets(0, 0, 0, 5);
@@ -737,7 +737,7 @@ public class VitamConfigDialog extends JPanel {
 		toolsPanel.add(lowlimitms, gbc_lowlimit);
 		lowlimitms.setColumns(10);
 		
-		JLabel lblLimitOccurence = new JLabel("Keyword Limit Rank Occurence");
+		JLabel lblLimitOccurence = new JLabel(StaticValues.LBL.config_keywordsrk.get());
 		GridBagConstraints gbc_lblLimitOccurence = new GridBagConstraints();
 		gbc_lblLimitOccurence.anchor = GridBagConstraints.EAST;
 		gbc_lblLimitOccurence.insets = new Insets(0, 0, 5, 5);
@@ -754,7 +754,7 @@ public class VitamConfigDialog extends JPanel {
 		toolsPanel.add(ranklimit, gbc_limit);
 		ranklimit.setColumns(10);
 
-		JLabel lblLimitWord = new JLabel("Keyword Limit Word Occurence");
+		JLabel lblLimitWord = new JLabel(StaticValues.LBL.config_keywordsnb.get());
 		GridBagConstraints gbc_lblLimitWord = new GridBagConstraints();
 		gbc_lblLimitWord.anchor = GridBagConstraints.EAST;
 		gbc_lblLimitWord.insets = new Insets(0, 0, 0, 5);

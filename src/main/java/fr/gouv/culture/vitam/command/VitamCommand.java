@@ -676,6 +676,9 @@ public class VitamCommand {
 		System.out.println("Digest...");
 		Element root = null;
 		VitamResult vitamResult = new VitamResult();
+		if (basedir.isFile()) {
+			basedir = basedir.getParentFile();
+		}
 		if (StaticValues.config.argument.outputModel == VitamOutputModel.OneXML) {
 			root = XmlDom.factory.createElement("digests");
 			root.addAttribute("source", basedir.getAbsolutePath());
@@ -686,11 +689,7 @@ public class VitamCommand {
 		for (File file : files) {
 			currank++;
 			String shortname;
-			if (basedir.isDirectory()) {
-				shortname = StaticValues.getSubPath(file, basedir);
-			} else {
-				shortname = basedir.getName();
-			}
+			shortname = StaticValues.getSubPath(file, basedir);
 			FileInputStream inputstream;
 			try {
 				inputstream = new FileInputStream(file);
@@ -807,7 +806,16 @@ public class VitamCommand {
 			System.err.println(StaticValues.LBL.error_error.get() + e1.toString());
 			return;
 		}
+		if (basedir.isFile()) {
+			basedir = basedir.getParentFile();
+		}
 		File baseoutdir = new File(toPdfA);
+		if (! baseoutdir.exists()) {
+			baseoutdir.mkdirs();
+		}
+		if (baseoutdir.isFile()) {
+			baseoutdir = baseoutdir.getParentFile();
+		}
 		int errorcpt = 0;
 		boolean checkDroid = false;
 		try {

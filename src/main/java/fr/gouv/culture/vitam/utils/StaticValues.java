@@ -104,7 +104,8 @@ public class StaticValues {
 		error_wrongformat, error_wrongoutput,
 		error_initdroid, error_initfits, error_writer, error_analysis,
 		error_fromextension, error_notfound, error_computedigest, error_pdfa,
-		button_save, button_cancel, button_exit, button_update, config_attentionxsd;
+		button_save, button_cancel, button_exit, button_update, config_attentionxsd,
+		config_keywords, config_keywordsrk, config_keywordsnb, config_limitlow, config_limitkb;
 
 		public String label;
 
@@ -386,7 +387,7 @@ public class StaticValues {
 	 */
 	public static final String getSubPath(File fullPath, File fromPath) {
 		String spath = fullPath.getAbsolutePath();
-		String sparent = fromPath.getParentFile().getAbsolutePath() + File.separator;
+		String sparent = fromPath.getAbsolutePath() + File.separator;
 		return spath.replace(sparent, "");
 	}
 }
