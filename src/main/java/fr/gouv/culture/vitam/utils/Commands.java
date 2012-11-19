@@ -51,7 +51,6 @@ public class Commands {
 	 * @param argument
 	 * @return the Element associated with the result
 	 */
-	@SuppressWarnings("unchecked")
 	public static Element showFormat(String basename, String mimeCode, String format,
 			File fic, ConfigLoader config, VitamArgument argument) {
 		try {
@@ -79,6 +78,39 @@ public class Commands {
 				newElt.addAttribute("jhove", config.jhove.getToolInfo().version);
 			}
 			root.add(newElt);
+			addFormatIdentification(root, basename, fic, config, argument);
+			return root;
+		} catch (Exception e) {
+			System.err.println("FITS_ERROR: " + e);
+			e.printStackTrace();
+			Element root = XmlDom.factory.createElement("showformat");
+			Element newElt = XmlDom.factory.createElement("file");
+			newElt.addAttribute("filename", basename);
+			if (mimeCode != null) {
+				newElt.addAttribute("mime", mimeCode);
+			}
+			if (format != null) {
+				newElt.addAttribute("puid", format);
+			}
+			root.add(newElt);
+			root.addAttribute("status", e.toString());
+			return root;
+		}
+	}
+
+	/**
+	 * Identify format of one file
+	 * @param root where the information will be added
+	 * @param basename
+	 * @param fic
+	 * @param config
+	 * @param argument
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public static final void addFormatIdentification(Element root, String basename, File fic, 
+			ConfigLoader config, VitamArgument argument) throws Exception {
+		try {
 			Element identification, fileinfo, filestatus, metadata;
 			
 			identification = XmlDom.factory.createElement("identification");
@@ -98,7 +130,7 @@ public class Commands {
 			DroidFileFormat finalFormat = null;
 			if (config.droidHandler != null) {
 				List<DroidFileFormat> formats = config.droidHandler.checkFileFormat(fic, argument);
-				newElt = XmlDom.factory.createElement("subidentities");
+				Element newElt = XmlDom.factory.createElement("subidentities");
 				if (formats != null && !formats.isEmpty()) {
 					boolean multiple = argument.archive && formats.size() > 1;
 					Iterator<DroidFileFormat> iterator = formats.iterator();
@@ -147,7 +179,7 @@ public class Commands {
 					root.add(keyw.detach());
 				}
 				root.addAttribute("status", status);
-				return root;
+				return;
 			}
 			ToolOutput toolOuput;
 			List<Element> sublist;
@@ -175,7 +207,7 @@ public class Commands {
 							toAdd = sublist.get(0);
 							findSubTree = true;
 							toAdd = (Element) toAdd.detach();
-							newElt = XmlDom.factory.createElement("ExifTool");
+							Element newElt = XmlDom.factory.createElement("ExifTool");
 							newElt.add(toAdd);
 							toAdd = null;
 							identification.add(newElt);
@@ -210,7 +242,7 @@ public class Commands {
 				}
 				if (!findSubTree) {
 					toAdd = (Element) doc.getRootElement().detach();
-					newElt = XmlDom.factory.createElement("ExifTool");
+					Element newElt = XmlDom.factory.createElement("ExifTool");
 					newElt.add(toAdd);
 					root.add(newElt);
 				}
@@ -236,7 +268,7 @@ public class Commands {
 							toAdd = sublist.get(0);
 							findSubTree = true;
 							toAdd = (Element) toAdd.detach();
-							newElt = XmlDom.factory.createElement("JHove");
+							Element newElt = XmlDom.factory.createElement("JHove");
 							newElt.add(toAdd);
 							toAdd = null;
 							identification.add(newElt);
@@ -279,7 +311,7 @@ public class Commands {
 				}
 				if (!findSubTree) {
 					toAdd = (Element) doc.getRootElement().detach();
-					newElt = XmlDom.factory.createElement("JHove");
+					Element newElt = XmlDom.factory.createElement("JHove");
 					newElt.add(toAdd);
 					root.add(newElt);
 				}
@@ -294,22 +326,8 @@ public class Commands {
 			}			
 			// Global result
 			root.addAttribute("status", status);
-			return root;
 		} catch (Exception e) {
-			System.err.println("FITS_ERROR: " + e);
-			e.printStackTrace();
-			Element root = XmlDom.factory.createElement("showformat");
-			Element newElt = XmlDom.factory.createElement("file");
-			newElt.addAttribute("filename", basename);
-			if (mimeCode != null) {
-				newElt.addAttribute("mime", mimeCode);
-			}
-			if (format != null) {
-				newElt.addAttribute("puid", format);
-			}
-			root.add(newElt);
-			root.addAttribute("status", e.toString());
-			return root;
+			throw e;
 		}
 	}
 

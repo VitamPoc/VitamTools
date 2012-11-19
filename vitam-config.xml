@@ -3,14 +3,14 @@
   SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
    <comment>Vitam Tools configuration</comment>
-   <entry key="vitam.guisave">0</entry>
+   <entry key="vitam.guisave">1</entry>
    <entry key="vitam.docfield">Document</entry>
    <entry key="vitam.formatattrib">@format</entry>
-   <entry key="vitam.sha512">1</entry>
+   <entry key="vitam.sha512">0</entry>
    <entry key="vitam.mimeattrib">@mimeCode</entry>
    <entry key="vitam.checkrecursive">0</entry>
    <entry key="vitam.fileattrib">@filename</entry>
-   <entry key="vitam.checkarchives">0</entry>
+   <entry key="vitam.checkarchives">1</entry>
    <entry key="vitam.msperkb">300</entry>
    <entry key="org.xml.sax.driver">org.apache.xerces.parsers.SAXParser</entry>
    <entry key="vitam.output">2</entry>
@@ -28,7 +28,7 @@
    <entry key="vitam.signature">droid-6.1/DROID_SignatureFile_V63.xml</entry>
    <entry key="vitam.location">fr:gouv:culture:archivesdefrance:seda:v1.0</entry>
    <entry key="vitam.ranklimit">10</entry>
-   <entry key="vitam.sha256">1</entry>
+   <entry key="vitam.sha256">0</entry>
    <entry key="vitam.unoconv">unoconv/unoconv.py</entry>
    <entry key="vitam.sha1">1</entry>
    <entry key="vitam.root">ArchiveTransfer</entry>

@@ -21,10 +21,11 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -38,10 +39,8 @@ import javax.mail.internet.MimeMessage;
 
 import org.dom4j.Element;
 
-import uk.gov.nationalarchives.droid.command.action.CommandExecutionException;
-
-import fr.gouv.culture.vitam.droid.DroidFileFormat;
 import fr.gouv.culture.vitam.extract.ExtractInfo;
+import fr.gouv.culture.vitam.utils.Commands;
 import fr.gouv.culture.vitam.utils.ConfigLoader;
 import fr.gouv.culture.vitam.utils.StaticValues;
 import fr.gouv.culture.vitam.utils.VitamArgument;
@@ -55,13 +54,16 @@ import fr.gouv.culture.vitam.utils.XmlDom;
  */
 public class EmlExtract {
 	
+	public static HashMap<String, String> filEmls = new HashMap<String, String>();
+	
 	private static String addAddress(Element root, String entry, Address address, String except) {
 		String value = address.toString();
+		value = StringUtils.selectChevron(value);
 		if (value == null || (except != null && value.equalsIgnoreCase(except))) {
 			return null;
 		}
 		Element val = XmlDom.factory.createElement(entry);
-		val.setText(value);
+		val.setText(StringUtils.unescapeHTML(value, true, false));
 		root.add(val);
 		return value;
 	}
@@ -125,7 +127,7 @@ public class EmlExtract {
 			String subject = message.getSubject();
 			if (subject != null) {
 				Element sub = XmlDom.factory.createElement("subject");
-				sub.setText(subject);
+				sub.setText(StringUtils.unescapeHTML(subject, true, false));
 				metadata.add(sub);
 			}
 			Date sentDate = message.getSentDate();
@@ -155,13 +157,81 @@ public class EmlExtract {
 			String encoding = message.getEncoding();
 			if (encoding != null) {
 				Element sub = XmlDom.factory.createElement("encoding");
-				sub.setText(encoding);
+				sub.setText(StringUtils.unescapeHTML(encoding, true, false));
 				metadata.add(sub);
 			}
 			String description = message.getDescription();
 			if (description != null) {
 				Element sub = XmlDom.factory.createElement("description");
-				sub.setText(description);
+				sub.setText(StringUtils.unescapeHTML(description, true, false));
+				metadata.add(sub);
+			}
+			String contentType = message.getContentType();
+			if (contentType != null) {
+				Element sub = XmlDom.factory.createElement("contentType");
+				sub.setText(StringUtils.unescapeHTML(contentType, true, false));
+				metadata.add(sub);
+			}
+			String messageId = message.getMessageID();
+			if (messageId != null) {
+				Element sub = XmlDom.factory.createElement("messageId"); 
+				messageId = StringUtils.removeChevron(StringUtils.unescapeHTML(messageId, true, false));
+				sub.setText(messageId);
+				metadata.add(sub);
+			}
+			String contentId = message.getContentID();
+			if (contentId != null) {
+				Element sub = XmlDom.factory.createElement("contentId");
+				sub.setText(StringUtils.removeChevron(StringUtils.unescapeHTML(contentId, true, false)));
+				metadata.add(sub);
+			}
+			String []contentLanguage = message.getContentLanguage();
+			if (contentLanguage != null) {
+				Element sub = XmlDom.factory.createElement("contentLanguage");
+				StringBuilder builder = new StringBuilder();
+				for (String string : contentLanguage) {
+					builder.append(StringUtils.unescapeHTML(string, true, false));
+					builder.append(' ');
+				}
+				sub.setText(builder.toString());
+				metadata.add(sub);
+			}
+			String []headers = message.getHeader("In-Reply-To");
+			String inreplyto = null;
+			if (headers != null) {
+				Element sub = XmlDom.factory.createElement("inReplyTo");
+				StringBuilder builder = new StringBuilder();
+				for (String string : headers) {
+					builder.append(StringUtils.removeChevron(StringUtils.unescapeHTML(string, true, false)));
+					builder.append(' ');
+				}
+				inreplyto = builder.toString().trim();
+				sub.setText(inreplyto);
+				String old = filEmls.get(inreplyto);
+				if (old == null) {
+					old = messageId;
+				} else {
+					old += ","+messageId;
+				}
+				filEmls.put(inreplyto, old);
+				metadata.add(sub);
+			}
+			headers = message.getHeader("References");
+			if (headers != null) {
+				Element sub = XmlDom.factory.createElement("references");
+				StringBuilder builder = new StringBuilder();
+				for (String string : headers) {
+					builder.append(StringUtils.removeChevron(StringUtils.unescapeHTML(string, true, false)));
+					builder.append(' ');
+				}
+				String []refs = builder.toString().trim().split(" ");
+				for (String string : refs) {
+					if (string.length() > 0) {
+						Element ref = XmlDom.factory.createElement("reference");
+						ref.setText(string);
+						sub.add(ref);
+					}
+				}
 				metadata.add(sub);
 			}
 			try {
@@ -215,8 +285,9 @@ public class EmlExtract {
 	
 	private static final String handleMessage(Message message, Element metadata, VitamArgument argument, ConfigLoader config) throws IOException, MessagingException {
 		Object content = message.getContent();
+		String result = "";
 		if (content instanceof String) {
-			return (String) content;
+			result = (String) content;
 		} else if (content instanceof Multipart) {
 			// handle multi part
 			Multipart mp = (Multipart) content;
@@ -225,9 +296,9 @@ public class EmlExtract {
 			if (identification.hasContent()) {
 				metadata.add(identification);
 			}
-			return value;
+			result = value;
 		}
-		return null;
+		return result;
 	}
 
 	private static final String handleMultipart(Multipart mp, Element identification, VitamArgument argument, ConfigLoader config) throws MessagingException, IOException {
@@ -235,99 +306,150 @@ public class EmlExtract {
 		String result = "";
 		for (int i = 0; i < count; i++) {
 			BodyPart bp = mp.getBodyPart(i);
+			
 			Object content = bp.getContent();
 			if (content instanceof String) {
 				result += " " + (String) content;
 			} else if (content instanceof InputStream) {
 				// handle input stream
-				try {
-					List<DroidFileFormat> formats = config.droidHandler.checkFileFormat((InputStream) content, argument);
-					addSubIdentities(identification, formats, argument, config);
-				} catch (CommandExecutionException e) {
-					System.err.println(StaticValues.LBL.error_error.get() + e.toString());
-				}
+				result += " " + addSubIdentities(identification, bp, (InputStream) content, argument, config);
+				((InputStream) content).close();
 			} else if (content instanceof Message) {
 				Message message = (Message) content;
-				handleMessageRecur(message, identification, argument, config);
+				result += " " + handleMessageRecur(message, identification, argument, config);
 			} else if (content instanceof Multipart) {
 				Multipart mp2 = (Multipart) content;
-				handleMultipartRecur(mp2, identification, argument, config);
+				result += " " + handleMultipartRecur(mp2, identification, argument, config);
 			}
 		}
 		return result;
 	}
 	
-	private static final void addSubIdentities(Element identification, List<DroidFileFormat> formats, VitamArgument argument, ConfigLoader config) {
-		Element toAdd = null;
+	private static final String addSubIdentities(Element identification, BodyPart bp, InputStream inputStream, VitamArgument argument, ConfigLoader config) {
 		Element newElt = XmlDom.factory.createElement("subidentities");
-		if (formats != null && !formats.isEmpty()) {
-			boolean multiple = argument.archive && formats.size() > 1;
-			Iterator<DroidFileFormat> iterator = formats.iterator();
-			DroidFileFormat droidFileFormat = iterator.next();
-			String status = "ok";
-			if (droidFileFormat.getPUID().equals(DroidFileFormat.Unknown)) {
-				toAdd = droidFileFormat.toElement(multiple);
-				identification.add(toAdd);
+		String filename = null;
+		String result = "";
+		try {
+			filename = bp.getFileName();
+			if (filename != null) {
+				Element elt = XmlDom.factory.createElement("filename");
+				elt.setText(filename);
+				newElt.add(elt);
 			} else {
-				if (config.preventXfmt && droidFileFormat.getPUID().startsWith(StaticValues.FORMAT_XFMT)) {
-					status = "warning";
-				}
-				toAdd = droidFileFormat.toElement(multiple);
-				identification.add(toAdd);
+				filename = "eml.eml";
 			}
-			boolean other = false;
-			while (iterator.hasNext()) {
-				other = true;
-				droidFileFormat = (DroidFileFormat) iterator.next();
-				if (droidFileFormat.getPUID().equals(DroidFileFormat.Unknown)) {
-					toAdd = droidFileFormat.toElement(multiple);
-					newElt.add(toAdd);
-				} else {
-					//identityFound = true;
-					toAdd = droidFileFormat.toElement(multiple);
-					newElt.add(toAdd);
-				}
-			}
-			if (other) {
-				identification.add(newElt);
-			}
-			identification.addAttribute("status", status);
+		} catch (MessagingException e) {
 		}
+		try {
+			int size = bp.getSize();
+			if (size > 0) {
+				Element elt = XmlDom.factory.createElement("size");
+				elt.setText(Integer.toString(size));
+				newElt.add(elt);
+			}
+		} catch (MessagingException e) {
+		}
+		try {
+			String description = bp.getDescription();
+			if (description != null) {
+				Element elt = XmlDom.factory.createElement("description");
+				elt.setText(description);
+				newElt.add(elt);
+			}
+		} catch (MessagingException e) {
+		}
+		try {
+			String disposition = bp.getDisposition();
+			if (disposition != null) {
+				Element elt = XmlDom.factory.createElement("disposition");
+				elt.setText(disposition);
+				newElt.add(elt);
+			}
+		} catch (MessagingException e) {
+		}
+		File filetemp = null;
+		FileOutputStream outputStream = null;
+		try {
+			// Force out as eml
+			filetemp = File.createTempFile("tmp", ".eml");
+			byte [] buffer = new byte[8192];
+			int read = 0;
+			outputStream = new FileOutputStream(filetemp);
+			while ((read = inputStream.read(buffer)) >= 0) {
+				outputStream.write(buffer, 0, read);
+			}
+			outputStream.close();
+			outputStream = null;
+		} catch (IOException e1) {
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				} catch (IOException e) {
+				}
+			}
+			String status = "Error during access to attachment";
+			newElt.addAttribute("status", status);
+			identification.add(newElt);
+			return "";
+		}
+		try {
+			Commands.addFormatIdentification(newElt, filename, filetemp, config, argument);
+			// get back keyword in the main list
+			Element keyw = (Element) newElt.selectSingleNode("keywords");
+			if (keyw != null) {
+				StringBuilder builder = new StringBuilder();
+				@SuppressWarnings("unchecked")
+				List<Element> elts = (List<Element>) keyw.selectNodes("rank/word");
+				for (Element elt : elts) {
+					builder.append(elt.selectSingleNode("@value").getText());
+					builder.append(' ');
+				}
+				result = builder.toString().trim();
+			}
+			
+		} catch (Exception e) {
+			String status = "Error during identification";
+			e.printStackTrace();
+			newElt.addAttribute("status", status);
+		}
+		identification.add(newElt);
+		return result;
 	}
 	
-	private static final void handleMessageRecur(Message message, Element identification, VitamArgument argument, ConfigLoader config) throws IOException, MessagingException {
+	private static final String handleMessageRecur(Message message, Element identification, VitamArgument argument, ConfigLoader config) throws IOException, MessagingException {
 		Object content = message.getContent();
+		String result = "";
 		if (content instanceof String) {
+			result = (String) content;
 			// ignore string
 		} else if (content instanceof Multipart) {
 			Multipart mp = (Multipart) content;
-			handleMultipartRecur(mp, identification, argument, config);
+			result = handleMultipartRecur(mp, identification, argument, config);
 			// handle multi part
 		}
+		return result;
 	}
 
-	private static final void handleMultipartRecur(Multipart mp, Element identification, VitamArgument argument, ConfigLoader config) throws MessagingException, IOException {
+	private static final String handleMultipartRecur(Multipart mp, Element identification, VitamArgument argument, ConfigLoader config) throws MessagingException, IOException {
 		int count = mp.getCount();
+		String result = "";
 		for (int i = 0; i < count; i++) {
 			BodyPart bp = mp.getBodyPart(i);
 			Object content = bp.getContent();
 			if (content instanceof String) {
+				result += " "+ (String) content;
 				// ignore string
 			} else if (content instanceof InputStream) {
 				// handle input stream
-				try {
-					List<DroidFileFormat> formats = config.droidHandler.checkFileFormat((InputStream) content, argument);
-					addSubIdentities(identification, formats, argument, config);
-				} catch (CommandExecutionException e) {
-					System.err.println(StaticValues.LBL.error_error.get() + e.toString());
-				}
+				result += " "+ addSubIdentities(identification, bp, (InputStream) content, argument, config);
 			} else if (content instanceof Message) {
 				Message message = (Message) content;
-				handleMessageRecur(message, identification, argument, config);
+				result += " "+ handleMessageRecur(message, identification, argument, config);
 			} else if (content instanceof Multipart) {
 				Multipart mp2 = (Multipart) content;
-				handleMultipartRecur(mp2, identification, argument, config);
+				result += " "+ handleMultipartRecur(mp2, identification, argument, config);
 			}
 		}
+		return result;
 	}
 }

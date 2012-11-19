@@ -37,6 +37,7 @@ import uk.gov.nationalarchives.droid.command.action.CommandExecutionException;
 import fr.gouv.culture.vitam.digest.DigestCompute;
 import fr.gouv.culture.vitam.droid.DroidFileFormat;
 import fr.gouv.culture.vitam.droid.DroidHandler;
+import fr.gouv.culture.vitam.eml.EmlExtract;
 import fr.gouv.culture.vitam.pdfa.PdfaConverter;
 import fr.gouv.culture.vitam.utils.Commands;
 import fr.gouv.culture.vitam.utils.ConfigLoader;
@@ -961,6 +962,7 @@ public class VitamCommand {
 				root = XmlDom.factory.createElement("checkfiles");
 				root.addAttribute("source", FILEarg);
 				global = XmlDom.factory.createDocument(root);
+				EmlExtract.filEmls.clear();
 			}
 			if (showFormat) {
 				if (StaticValues.config.droidHandler == null &&
@@ -1058,6 +1060,22 @@ public class VitamCommand {
 			}
 			if (global != null) {
 				XmlDom.addDate(StaticValues.config.argument, StaticValues.config, root);
+				if (! EmlExtract.filEmls.isEmpty()) {
+					Element sortEml = XmlDom.factory.createElement("emlsort");
+					for (String parent : EmlExtract.filEmls.keySet()) {
+						Element eparent = XmlDom.factory.createElement("parent");
+						String fil = EmlExtract.filEmls.get(parent);
+						eparent.addAttribute("messageId", parent);
+						String []fils = fil.split(",");
+						for (String mesg : fils) {
+							Element elt = XmlDom.factory.createElement("descendant");
+							elt.addAttribute("messageId", mesg);
+							eparent.add(elt);
+						}
+						sortEml.add(eparent);
+					}
+					root.add(sortEml);
+				}
 				try {
 					writer.write(global);
 				} catch (IOException e) {

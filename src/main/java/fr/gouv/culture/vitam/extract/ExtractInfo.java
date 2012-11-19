@@ -44,6 +44,7 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 
 import fr.gouv.culture.vitam.droid.DroidFileFormat;
+import fr.gouv.culture.vitam.eml.StringUtils;
 import fr.gouv.culture.vitam.utils.ConfigLoader;
 import fr.gouv.culture.vitam.utils.PreferencesResourceBundle;
 import fr.gouv.culture.vitam.utils.StaticValues;
@@ -57,6 +58,8 @@ import fr.gouv.culture.vitam.utils.XmlDom;
  * 
  */
 public class ExtractInfo {
+	public static final String MAXRANK = "##MAXRANK##";
+	
 	private static PreferencesResourceBundle StopWords = null;
 	public static HashSet<String> ignoreWords = getHash();
 	private static HashSet<String> getHash() {
@@ -66,6 +69,11 @@ public class ExtractInfo {
 		String stopwords = StopWords.get("stopwords");
 		String [] list = stopwords.split(",");
 		HashSet<String> hash = new HashSet<String>(list.length);
+		for (String word : list) {
+			hash.add(word);
+		}
+		stopwords = StopWords.get("htmlstopwords");
+		list = stopwords.split(",");
 		for (String word : list) {
 			hash.add(word);
 		}
@@ -98,34 +106,16 @@ public class ExtractInfo {
 			root.add(result);
 		}
 	}
-	/**
-	 * Helper to get from a String a list of words to search in the keywords
-	 * @param source
-	 * @return the list as space separator
-	 */
-	public static final String convertToSearchWords(String source) {
-		if (source == null) {
-			return "";
+	
+	private static final HashMap<String, Integer> getWordRank(String source) {
+		HashMap<String, Integer> references = new HashMap<String, Integer>();
+		if (source == null || source.length() <= 1) {
+			return references;
 		}
-		String result = source.replaceAll("[\\s\\d\\«\\»\\.\\,\\?\\;\\.\\:\\!\\\"\\'\\(\\[\\`\\)\\]\\=\\{\\}\\<\\>\\~\\’\\°\\‟\\/\\_]", " ");
-		result = result.replaceAll("[\\.&&[^\\w]]", " ");
-		// remove all at most 2 letters
-		result = result.replaceAll("\\b\\S{1,2}\\b", " ");
-		// remove all lower case at most 3 letters
-		result = result.replaceAll("\\b[a-z]{1,3}\\b", "");
-		// remove all special code
-		result = result.replaceAll("\\b[\\\\\\•\\+\\-\\=\\*\\%\\€\\$\\§\\²\\-\\/\\&]\\b", "");
-		result = result.replaceAll("\\s[\\\\\\•\\+\\-\\=\\*\\%\\€\\$\\§\\²\\-\\/\\&]\\s", " ");
-		int len = result.length();
-		while (true) {
-			result = result.replace("  ", " ");
-			if (result.length() == len)
-				break;
-			len = result.length();
-		}
+		int maxRank = 0;
+		String result = StringUtils.unescapeHTML(source, true, true);
 		String [] words = result.split(" ");
 		result = null;
-		StringBuilder builder = new StringBuilder();
 		for (String word : words) {
 			word = word.replaceAll("[\\.&&[^\\w]]", "");
 			// keep All Upper word with more than 3 chars as is
@@ -148,15 +138,72 @@ public class ExtractInfo {
 			}
 			// try to go back to single
 			if (word.endsWith("s")) {
+				// add potential non plural
 				String wordwithouts = word.substring(0, word.length()-1);
-				builder.append(wordwithouts);
-				builder.append(' ');
+				if (references.containsKey(wordwithouts)) {
+					Integer value = references.get(wordwithouts);
+					Integer valueold = references.remove(word);
+					if (valueold != null) {
+						value += valueold;
+					}
+					references.put(wordwithouts, (value+1));
+					maxRank = maxRank > value ? maxRank : value + 1;
+					// not adding plural
+					continue;
+				} else {
+					references.put(wordwithouts, 1);
+					maxRank = maxRank > 1 ? maxRank : 1;
+				}
+			}
+			// try to go back to single
+			String wordwiths = word + "s";
+			if (references.containsKey(wordwiths)) {
+				// remove plural
+				Integer value = references.remove(wordwiths);
+				Integer valueold = references.get(word);
+				if (valueold != null) {
+					value += valueold;
+				}
+				references.put(word, (value+1));
+				maxRank = maxRank > value ? maxRank : value + 1;
+				continue;
+			}
+			if (references.containsKey(word)) {
+				Integer value = references.get(word);
+				references.put(word, (value+1));
+				maxRank = maxRank > value ? maxRank : value + 1;
 			} else {
-				builder.append(word);
-				builder.append(' ');
+				references.put(word, 1);
+				maxRank = maxRank > 1 ? maxRank : 1;
 			}
 		}
+		references.put(MAXRANK, maxRank);
 		words = null;
+		return references;
+	}
+	/**
+	 * Helper to get from a String a list of words to search in the keywords
+	 * @param source
+	 * @return the list as space separator
+	 */
+	public static final String convertToSearchWords(String source) {
+		if (source == null) {
+			return "";
+		}
+		HashMap<String, Integer> references = getWordRank(source);
+		if (references.isEmpty()) {
+			return "";
+		}
+		StringBuilder builder = new StringBuilder();
+		for (String elt : references.keySet()) {
+			if (elt.equals(MAXRANK)) {
+				continue;
+			}
+			builder.append(elt);
+			builder.append(' ');
+		}
+		references.clear();
+		references = null;
 		return builder.toString().trim();
 	}
 	
@@ -243,91 +290,11 @@ public class ExtractInfo {
 	public static Element exportMetadata(Element root, String words, String filename, ConfigLoader config,
 			XMLWriter writer) {
 		try {
-			HashMap<String, Integer> references = new HashMap<String, Integer>();
+			HashMap<String, Integer> references = getWordRank(words);
+			Integer MaxRank = references.remove(MAXRANK);
 			int maxRank = 0;
-			if (words != null && words.length() > 1) {
-				String result = words;
-				// remove all non usefull string
-				result = result.replaceAll("[\\s\\d\\«\\»\\.\\,\\?\\;\\.\\:\\!\\\"\\'\\(\\[\\`\\)\\]\\=\\{\\}\\<\\>\\~\\’\\°\\‟\\/\\_]", " ");
-				result = result.replaceAll("[\\.&&[^\\w]]", " ");
-				// remove all at most 2 letters
-				result = result.replaceAll("\\b\\S{1,2}\\b", " ");
-				// remove all lower case at most 3 letters
-				result = result.replaceAll("\\b[a-z]{1,3}\\b", "");
-				// remove all special code
-				result = result.replaceAll("\\b[\\\\\\•\\+\\-\\=\\*\\%\\€\\$\\§\\²\\-\\/\\&]\\b", "");
-				result = result.replaceAll("\\s[\\\\\\•\\+\\-\\=\\*\\%\\€\\$\\§\\²\\-\\/\\&]\\s", " ");
-				// remove all extra spaces
-				int len = result.length();
-				while (true) {
-					result = result.replace("  ", " ");
-					if (result.length() == len)
-						break;
-					len = result.length();
-				}
-				String [] wordLists = result.split(" ");
-				result = null;
-				for (String word : wordLists) {
-					word = word.replaceAll("[\\.&&[^\\w]]", "");
-					// keep All Upper word with more than 3 chars as is
-					if (word.toUpperCase().equals(word)) {
-						if (word.length() > 20) {
-							word = word.toLowerCase();
-						}
-					} else {
-						word = word.toLowerCase();
-					}
-					if (word.length() < 3) {
-						continue;
-					}
-					if (ignoreWords.contains(word)) {
-						continue;
-					}
-					// try to prevent binary words
-					if (word.matches(".*[aeyuioAEYUIO]{5}.*|.*[a-z&&^aeyuio]{8}.*")) {
-						continue;
-					}
-					// try to go back to single
-					if (word.endsWith("s")) {
-						// add potential non plural
-						String wordwithouts = word.substring(0, word.length()-1);
-						if (references.containsKey(wordwithouts)) {
-							Integer value = references.get(wordwithouts);
-							Integer valueold = references.remove(word);
-							if (valueold != null) {
-								value += valueold;
-							}
-							references.put(wordwithouts, (value+1));
-							maxRank = maxRank > value ? maxRank : value + 1;
-							// not adding plural
-							continue;
-						} else {
-							references.put(wordwithouts, 1);
-							maxRank = maxRank > 1 ? maxRank : 1;
-						}
-					}
-					// try to go back to single
-					String wordwiths = word + "s";
-					if (references.containsKey(wordwiths)) {
-						// remove plural
-						Integer value = references.remove(wordwiths);
-						Integer valueold = references.get(word);
-						if (valueold != null) {
-							value += valueold;
-						}
-						references.put(word, (value+1));
-						maxRank = maxRank > value ? maxRank : value + 1;
-						continue;
-					}
-					if (references.containsKey(word)) {
-						Integer value = references.get(word);
-						references.put(word, (value+1));
-						maxRank = maxRank > value ? maxRank : value + 1;
-					} else {
-						references.put(word, 1);
-						maxRank = maxRank > 1 ? maxRank : 1;
-					}
-				}
+			if (MaxRank != null) {
+				maxRank = MaxRank;
 			}
 			// Title of file will be considered as Main Keywords
 			String [] wordLists = convertToSearchWords(filename).split(" ");

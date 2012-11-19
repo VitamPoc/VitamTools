@@ -87,6 +87,7 @@ import java.util.concurrent.ExecutionException;
 import fr.gouv.culture.vitam.digest.DigestCompute;
 import fr.gouv.culture.vitam.droid.DroidFileFormat;
 import fr.gouv.culture.vitam.droid.DroidHandler;
+import fr.gouv.culture.vitam.eml.EmlExtract;
 import fr.gouv.culture.vitam.pdfa.PdfaConverter;
 import fr.gouv.culture.vitam.utils.Commands;
 import fr.gouv.culture.vitam.utils.ConfigLoader;
@@ -1845,6 +1846,7 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 		}
 		int currank = 0;
 		int warning = 0;
+		EmlExtract.filEmls.clear();
 		for (File file : files) {
 			currank++;
 			String shortname;
@@ -1877,8 +1879,23 @@ public class VitamGui extends JFrame implements WindowListener, PropertyChangeLi
 		}
 		if (root != null) {
 			XmlDom.addDate(config.argument, config, root);
+			if (! EmlExtract.filEmls.isEmpty()) {
+				Element sortEml = XmlDom.factory.createElement("emlsort");
+				for (String parent : EmlExtract.filEmls.keySet()) {
+					Element eparent = XmlDom.factory.createElement("parent");
+					String fil = EmlExtract.filEmls.get(parent);
+					eparent.addAttribute("messageId", parent);
+					String []fils = fil.split(",");
+					for (String mesg : fils) {
+						Element elt = XmlDom.factory.createElement("descendant");
+						elt.addAttribute("messageId", mesg);
+						eparent.add(elt);
+					}
+					sortEml.add(eparent);
+				}
+				root.add(sortEml);
+			}
 		}
-
 		texteOut.insertIcon(new ImageIcon(getClass().getResource(
 				RESOURCES_IMG_VALID_PNG)));
 		System.out

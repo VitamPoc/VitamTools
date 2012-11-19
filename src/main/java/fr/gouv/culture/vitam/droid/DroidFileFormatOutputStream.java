@@ -59,6 +59,36 @@ public class DroidFileFormatOutputStream extends ByteArrayOutputStream {
 			return;
 		}
 		String[] args = result.split(",");
+		// check if filename contains ","
+		int rank = 0;
+		for (String string : args) {
+			if (rank == 0) {
+				rank++;
+				continue;
+			}
+			if (string.startsWith("fmt") || string.startsWith("x-fmt")) {
+				break;
+			}
+			rank++;
+		}
+		String[] finalArgs = null;
+		if (rank == args.length) {
+			// there should be Unknown at last
+			rank = args.length-1;
+		}
+		finalArgs = new String[args.length-rank+1];
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < rank; i++) {
+			if (i != 0) {
+				builder.append(',');
+			}
+			builder.append(args[i]);
+		}
+		finalArgs[0] = builder.toString();
+		for (int i = rank; i < args.length; i++) {
+			finalArgs[i-rank+1] = args[i];
+		}
+		args = finalArgs;
 		if (args[1].equalsIgnoreCase(DroidFileFormat.Unknown)) {
 			formats.add(outputFormatExtension(args[0]));
 		} else {
