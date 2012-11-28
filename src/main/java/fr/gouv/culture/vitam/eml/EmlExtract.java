@@ -399,10 +399,18 @@ public class EmlExtract {
 			if (keyw != null) {
 				StringBuilder builder = new StringBuilder();
 				@SuppressWarnings("unchecked")
-				List<Element> elts = (List<Element>) keyw.selectNodes("rank/word");
+				List<Element> elts = (List<Element>) keyw.selectNodes("rank");
 				for (Element elt : elts) {
-					builder.append(elt.selectSingleNode("@value").getText());
-					builder.append(' ');
+					String value = elt.attributeValue("occur");
+					int occur = Integer.parseInt(value) / 2 +1;
+					@SuppressWarnings("unchecked")
+					List<Element> words = (List<Element>) elt.selectNodes("word");
+					for (Element eword : words) {
+						String word = eword.attributeValue("value")+ " ";
+						for (int i = 0; i < occur; i++) {
+							builder.append(word);
+						}
+					}
 				}
 				result = builder.toString().trim();
 			}
