@@ -118,6 +118,18 @@ public class XmlDom {
 		try {
 			Document document = saxReader.read(current_file);
 			removeAllNamespaces(document);
+			Node nodesrc = document.selectSingleNode("/digests");
+			String src = null;
+			String localsrc = current_file.getParentFile().getAbsolutePath() + File.separator;
+			if (nodesrc != null) {
+				nodesrc = nodesrc.selectSingleNode("@source");
+				if (nodesrc != null) {
+					src = nodesrc.getText() + "/";
+				}
+			}
+			if (src == null) {
+				src = localsrc;
+			}
 			@SuppressWarnings("unchecked")
 			List<Node> nodes = document.selectNodes("//" + config.DOCUMENT_FIELD);
 			if (nodes == null) {
@@ -161,12 +173,17 @@ public class XmlDom {
 					}
 					// Now check
 					// first existence check
-					String ficname = current_file.getParentFile().getAbsolutePath()
-							+ File.separator + sfile;
-					Element check = fillInformation(argument, root, "check", "filename",
-							sfile);
-					File fic = new File(ficname);
-					if (!fic.canRead()) {
+					String ficname = src + sfile;
+					Element check = fillInformation(argument, root, "check", "filename", sfile);
+					File fic1 = new File(ficname);
+					File fic2 = new File(localsrc + sfile);
+					File fic = null;
+					if (fic1.canRead()) {
+						fic = fic1;
+					} else if (fic2.canRead()) {
+						fic = fic2;
+					}
+					if (fic == null) {
 						fillInformation(argument, check, "find", "status",
 								StaticValues.LBL.error_filenotfile.get());
 						addDate(argument, config, result);

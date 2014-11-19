@@ -168,12 +168,12 @@ public class ConfigLoader {
 		MIMECODE_ATTRIBUTE = getProperty(properties, "vitam.mimeattrib",
 				MIMECODE_ATTRIBUTE);
 		FORMAT_ATTRIBUTE = getProperty(properties, "vitam.formatattrib", FORMAT_ATTRIBUTE);
-		properties.getProperty("vitam.schematron");
+		value = properties.getProperty("vitam.schematron");
 		if (value != null && value.length() == 0) {
 			value = null;
 		}
 		CURRENT_SCHEMATRON = value;
-		properties.getProperty("vitam.xsl");
+		value = properties.getProperty("vitam.xsl");
 		if (value != null && value.length() == 0) {
 			value = null;
 		}
@@ -229,12 +229,12 @@ public class ConfigLoader {
 		MIMECODE_ATTRIBUTE = getProperty(properties, "vitam.mimeattrib",
 				MIMECODE_ATTRIBUTE);
 		FORMAT_ATTRIBUTE = getProperty(properties, "vitam.formatattrib", FORMAT_ATTRIBUTE);
-		properties.getProperty("vitam.schematron");
+		value = properties.getProperty("vitam.schematron");
 		if (value != null && value.length() == 0) {
 			value = null;
 		}
 		CURRENT_SCHEMATRON = value;
-		properties.getProperty("vitam.xsl");
+		value = properties.getProperty("vitam.xsl");
 		if (value != null && value.length() == 0) {
 			value = null;
 		}
